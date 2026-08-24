@@ -12,7 +12,7 @@
 
 O **Feira Viva** nasce de um problema real: os produtores da associação local vendem apenas na feira presencial, e a comunidade não consegue comprar fora do horário da feira. O projeto leva a feira para a internet, com catálogo de produtos, carrinho de compras, pedidos e pagamento simulado.
 
-Desenvolvido na disciplina **Desenvolvimento para Servidores II (IDS002)** do curso **Tecnologia em Sistemas para Internet** (4º semestre / 2026), em parceria com a **Associação de Produtores Locais**.
+Desenvolvido na disciplina **Desenvolvimento para Servidores II** do curso **Tecnologia em Sistemas para Internet** (5º semestre / 2026), em parceria com a **Associação de Produtores Locais**.
 
 ### MVP
 
@@ -175,7 +175,7 @@ Testes E2E do fluxo de compra com Cypress *(Módulo 6)*.
 
 ## 🤝 Créditos
 
-Projeto desenvolvido pelas equipes do **Fábrica de Software** — disciplina Desenvolvimento para Servidores II (IDS002), sob orientação do **Prof. James Campos**, com apoio da **Associação de Produtores Locais**.
+Projeto desenvolvido pelas equipes do **Fábrica de Software** — disciplina Desenvolvimento para Servidores II, sob orientação do **Prof. James Campos**, com apoio da **Associação de Produtores Locais**.
 
 ## 📄 Licença
 
