@@ -3,6 +3,7 @@ package br.com.feiraviva.controller;
 import br.com.feiraviva.model.Produto;
 import br.com.feiraviva.service.ProdutoService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,11 +17,20 @@ public class ProdutoController {
 
     // Injeção de dependência via construtor
     public ProdutoController(ProdutoService produtoService) {
+
         this.produtoService = produtoService;
     }
 
     @GetMapping
     public List<Produto> listar() {
+
         return produtoService.listar();
     }
+
+    @GetMapping("/{id}")
+    public Produto buscar(@PathVariable Long id) {
+
+        return produtoService.buscar(id);
+    }
+
 }
