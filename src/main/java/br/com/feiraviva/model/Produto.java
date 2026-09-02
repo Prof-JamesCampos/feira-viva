@@ -46,7 +46,7 @@ public class Produto {
         this.categoria = categoria;
     }
 
-    // getters e setters (gerar pelo IDE)
+    // getters e setters (gerar pelo IDE (Alt + Insert))
 
     public Long getId() {
         return id;
