@@ -174,3 +174,4 @@ feira-viva/
 | `0.4` | 07 | JPA/Hibernate: Produto e Categoria persistidos (H2), consultas derivadas |
 | `0.5` | 08 | Cliente/Endereco, DTOs, validação (`jakarta.validation`) e erros centralizados (400/404/409) |
 | `0.6` | 09 | Carrinho/Pedido: snapshot de preço, estoque (R1), frete provisório (R6), status e cancelamento (R4); dívida técnica `clienteId` registrada |
+| `0.7` | 10 | GoF: singleton `ConfiguracoesFeiraViva`, `CupomFactory` + hierarquia `Cupom` (value objects), cupom no carrinho (`codigo_cupom`, rotas POST/DELETE `/carrinho/cupom`), `CarrinhoResponseDTO` com `cupom`/`desconto`, regra R7, R2/R6 atualizadas, `/debug/instancias` provisório e dívidas registradas |
