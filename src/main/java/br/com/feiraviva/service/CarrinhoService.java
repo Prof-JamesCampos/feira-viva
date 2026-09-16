@@ -1,8 +1,10 @@
 package br.com.feiraviva.service;
 
+import br.com.feiraviva.config.ConfiguracoesFeiraViva;
 import br.com.feiraviva.dto.*;
 import br.com.feiraviva.exception.RegraDeNegocioException;
 import br.com.feiraviva.exception.ResourceNotFoundException;
+import br.com.feiraviva.factory.CupomFactory;
 import br.com.feiraviva.model.*;
 import br.com.feiraviva.repository.*;
 import org.springframework.stereotype.Service;
@@ -14,19 +16,25 @@ import java.util.List;
 @Service
 public class CarrinhoService {
 
-    private static final BigDecimal FRETE_FIXO = new BigDecimal("15.00");
-    private static final BigDecimal FRETE_GRATIS_ACIMA_DE = new BigDecimal("100.00");
+//    private static final BigDecimal FRETE_FIXO = new BigDecimal("15.00");
+//    private static final BigDecimal FRETE_GRATIS_ACIMA_DE = new BigDecimal("100.00");
 
     private final CarrinhoRepository carrinhoRepository;
     private final ProdutoRepository produtoRepository;
     private final ClienteRepository clienteRepository;
+    private final ConfiguracoesFeiraViva configuracoes;
+    private final CupomFactory cupomFactory;
 
     public CarrinhoService(CarrinhoRepository carrinhoRepository,
                            ProdutoRepository produtoRepository,
-                           ClienteRepository clienteRepository) {
+                           ClienteRepository clienteRepository,
+                           ConfiguracoesFeiraViva configuracoes,
+                           CupomFactory cupomFactory) {
         this.carrinhoRepository = carrinhoRepository;
         this.produtoRepository = produtoRepository;
         this.clienteRepository = clienteRepository;
+        this.configuracoes = configuracoes;
+        this.cupomFactory = cupomFactory;
     }
 
     @Transactional
@@ -81,6 +89,21 @@ public class CarrinhoService {
         return paraResponse(carrinho);
     }
 
+    @Transactional
+    public CarrinhoResponseDTO aplicarCupom(Long clienteId, String codigo) {
+        var carrinho = buscarOuCriar(clienteId);
+        var cupom = cupomFactory.criar(codigo);      // 404 se inválido
+        carrinho.setCodigoCupom(cupom.getCodigo());
+        return paraResponse(carrinho);
+    }
+
+    @Transactional
+    public CarrinhoResponseDTO removerCupom(Long clienteId) {
+        var carrinho = buscarOuCriar(clienteId);
+        carrinho.setCodigoCupom(null);
+        return paraResponse(carrinho);
+    }
+
     // R1: quantidade nunca excede o estoque
     private void setQuantidade(ItemCarrinho item, int quantidade) {
         if (quantidade > item.getProduto().getEstoque()) {
@@ -102,20 +125,52 @@ public class CarrinhoService {
     }
 
     public BigDecimal calcularFrete(BigDecimal subtotal) {
-        return subtotal.compareTo(FRETE_GRATIS_ACIMA_DE) >= 0
-                ? BigDecimal.ZERO : FRETE_FIXO;
+       // return subtotal.compareTo(FRETE_GRATIS_ACIMA_DE) >= 0
+        //       ? BigDecimal.ZERO : FRETE_FIXO;
+        return subtotal.compareTo(configuracoes.getFreteGratisAcimaDe()) >= 0
+                ? BigDecimal.ZERO
+                : configuracoes.getFreteFixo();
     }
 
-    private CarrinhoResponseDTO paraResponse(Carrinho c) {
-        var itens = c.getItens().stream()
-                .map(i -> new ItemResponseDTO(i.getId(), i.getProduto().getId(),
-                        i.getProduto().getNome(), i.getQuantidade(),
-                        i.getPrecoUnitario(), i.getSubtotal()))
-                .toList();
-        var subtotal = c.getItens().stream()
-                .map(ItemCarrinho::getSubtotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        var frete = calcularFrete(subtotal);
-        return new CarrinhoResponseDTO(c.getId(), itens, subtotal, frete, subtotal.add(frete));
+//    private CarrinhoResponseDTO paraResponse(Carrinho c) {
+//        var itens = c.getItens().stream()
+//                .map(i -> new ItemResponseDTO(i.getId(), i.getProduto().getId(),
+//                        i.getProduto().getNome(), i.getQuantidade(),
+//                        i.getPrecoUnitario(), i.getSubtotal()))
+//                .toList();
+//        var subtotal = c.getItens().stream()
+//                .map(ItemCarrinho::getSubtotal)
+//                .reduce(BigDecimal.ZERO, BigDecimal::add);
+//        var frete = calcularFrete(subtotal);
+//        return new CarrinhoResponseDTO(c.getId(), itens, subtotal, frete, subtotal.add(frete));
+//    }
+
+private CarrinhoResponseDTO paraResponse(Carrinho c) {
+    var itens = c.getItens().stream()
+            .map(i -> new ItemResponseDTO(i.getId(), i.getProduto().getId(),
+                    i.getProduto().getNome(), i.getQuantidade(),
+                    i.getPrecoUnitario(), i.getSubtotal()))
+            .toList();
+    var subtotal = c.getItens().stream()
+            .map(ItemCarrinho::getSubtotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    var frete = calcularFrete(subtotal);
+
+    BigDecimal desconto = BigDecimal.ZERO;
+    String cupomAplicado = null;
+    if (c.getCodigoCupom() != null) {
+        var cupom = cupomFactory.criar(c.getCodigoCupom());
+        desconto = cupom.calcularDesconto(subtotal);
+        cupomAplicado = cupom.getCodigo();
+    }
+
+    var total = subtotal.add(frete).subtract(desconto);
+    return new CarrinhoResponseDTO(c.getId(), itens, cupomAplicado,
+            desconto, subtotal, frete, total);
+}
+
+    // diagnóstico didático — removível no deploy
+    public long identityHashCodeConfiguracoes() {
+        return System.identityHashCode(configuracoes);
     }
 }

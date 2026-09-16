@@ -21,8 +21,12 @@ public class Carrinho {
 
     private LocalDateTime dataCriacao = LocalDateTime.now();
 
+    @Column(name = "codigo_cupom", length = 20)
+    private String codigoCupom;
+
     protected Carrinho() { }
     public Carrinho(Cliente cliente) { this.cliente = cliente; }
+
 
     // getters e setters (gerar pelo IDE)
 
@@ -56,5 +60,13 @@ public class Carrinho {
 
     public void setDataCriacao(LocalDateTime dataCriacao) {
         this.dataCriacao = dataCriacao;
+    }
+
+    public String getCodigoCupom() {
+        return codigoCupom;
+    }
+
+    public void setCodigoCupom(String codigoCupom) {
+        this.codigoCupom = codigoCupom;
     }
 }

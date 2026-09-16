@@ -40,4 +40,15 @@ public class CarrinhoController {
                                        @PathVariable Long itemId) {
         return carrinhoService.removerItem(clienteId, itemId);
     }
+
+    @PostMapping("/cupom")
+    public CarrinhoResponseDTO aplicarCupom(@RequestParam Long clienteId,
+                                            @RequestParam String codigo) {
+        return carrinhoService.aplicarCupom(clienteId, codigo);
+    }
+
+    @DeleteMapping("/cupom")
+    public CarrinhoResponseDTO removerCupom(@RequestParam Long clienteId) {
+        return carrinhoService.removerCupom(clienteId);
+    }
 }
