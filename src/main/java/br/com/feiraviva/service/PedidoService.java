@@ -5,6 +5,7 @@ import br.com.feiraviva.exception.RegraDeNegocioException;
 import br.com.feiraviva.exception.ResourceNotFoundException;
 import br.com.feiraviva.model.*;
 import br.com.feiraviva.repository.*;
+import br.com.feiraviva.strategy.CalculadoraFrete;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,15 +19,18 @@ public class PedidoService {
     private final CarrinhoRepository carrinhoRepository;
     private final EnderecoRepository enderecoRepository;
     private final CarrinhoService carrinhoService;
+    private final CalculadoraFrete calculadoraFrete;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          CarrinhoRepository carrinhoRepository,
                          EnderecoRepository enderecoRepository,
-                         CarrinhoService carrinhoService) {
+                         CarrinhoService carrinhoService,
+                         CalculadoraFrete calculadoraFrete) {
         this.pedidoRepository = pedidoRepository;
         this.carrinhoRepository = carrinhoRepository;
         this.enderecoRepository = enderecoRepository;
         this.carrinhoService = carrinhoService;
+        this.calculadoraFrete = calculadoraFrete;
     }
 
     @Transactional
@@ -62,16 +66,22 @@ public class PedidoService {
             subtotal = subtotal.add(itemPedido.getSubtotal());
         }
 
-        var frete = carrinhoService.calcularFrete(subtotal);
-        pedido.setSubtotal(subtotal);
-        pedido.setFrete(frete);
-        pedido.setTotal(subtotal.add(frete));
+//        var frete = carrinhoService.calcularFrete(subtotal);
+//        pedido.setSubtotal(subtotal);
+//        pedido.setFrete(frete);
+//        pedido.setTotal(subtotal.add(frete));
+
+        var estrategia = carrinho.getEstrategiaFrete() == null ? "PADRAO" :
+                carrinho.getEstrategiaFrete();
+
+        var frete = calculadoraFrete.calcular(estrategia, subtotal);
 
         pedidoRepository.save(pedido);
         pedido.setNumero(String.format("FV-%04d", pedido.getId()));  // dirty checking persiste
 
         carrinho.getItens().clear();   // carrinho zerado após a compra
         carrinho.setCodigoCupom(null);   // cupom não sobrevive à compra
+        carrinho.setEstrategiaFrete(null); // Limpa a estratégia após a compra
         return paraResponse(pedido);
     }
 

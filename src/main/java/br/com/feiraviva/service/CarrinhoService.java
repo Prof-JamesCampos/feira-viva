@@ -7,6 +7,7 @@ import br.com.feiraviva.exception.ResourceNotFoundException;
 import br.com.feiraviva.factory.CupomFactory;
 import br.com.feiraviva.model.*;
 import br.com.feiraviva.repository.*;
+import br.com.feiraviva.strategy.CalculadoraFrete;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,17 +25,20 @@ public class CarrinhoService {
     private final ClienteRepository clienteRepository;
     private final ConfiguracoesFeiraViva configuracoes;
     private final CupomFactory cupomFactory;
+    private final CalculadoraFrete calculadoraFrete;
 
     public CarrinhoService(CarrinhoRepository carrinhoRepository,
                            ProdutoRepository produtoRepository,
                            ClienteRepository clienteRepository,
                            ConfiguracoesFeiraViva configuracoes,
-                           CupomFactory cupomFactory) {
+                           CupomFactory cupomFactory,
+                           CalculadoraFrete calculadoraFrete) {
         this.carrinhoRepository = carrinhoRepository;
         this.produtoRepository = produtoRepository;
         this.clienteRepository = clienteRepository;
         this.configuracoes = configuracoes;
         this.cupomFactory = cupomFactory;
+        this.calculadoraFrete = calculadoraFrete;
     }
 
     @Transactional
@@ -124,12 +128,22 @@ public class CarrinhoService {
                 });
     }
 
-    public BigDecimal calcularFrete(BigDecimal subtotal) {
-       // return subtotal.compareTo(FRETE_GRATIS_ACIMA_DE) >= 0
-        //       ? BigDecimal.ZERO : FRETE_FIXO;
-        return subtotal.compareTo(configuracoes.getFreteGratisAcimaDe()) >= 0
-                ? BigDecimal.ZERO
-                : configuracoes.getFreteFixo();
+//    public BigDecimal calcularFrete(BigDecimal subtotal) {
+//       // return subtotal.compareTo(FRETE_GRATIS_ACIMA_DE) >= 0
+//        //       ? BigDecimal.ZERO : FRETE_FIXO;
+//        return subtotal.compareTo(configuracoes.getFreteGratisAcimaDe()) >= 0
+//                ? BigDecimal.ZERO
+//                : configuracoes.getFreteFixo();
+//    }
+
+    @Transactional
+    public CarrinhoResponseDTO definirEstrategiaFrete(Long clienteId, String tipo) {
+        if (!calculadoraFrete.existe(tipo)) {
+            throw new ResourceNotFoundException("Estratégia de frete inválida: " + tipo);
+        }
+        var carrinho = buscarOuCriar(clienteId);
+        carrinho.setEstrategiaFrete(tipo.toUpperCase().trim());
+        return paraResponse(carrinho);
     }
 
 //    private CarrinhoResponseDTO paraResponse(Carrinho c) {
@@ -145,32 +159,62 @@ public class CarrinhoService {
 //        return new CarrinhoResponseDTO(c.getId(), itens, subtotal, frete, subtotal.add(frete));
 //    }
 
-private CarrinhoResponseDTO paraResponse(Carrinho c) {
-    var itens = c.getItens().stream()
-            .map(i -> new ItemResponseDTO(i.getId(), i.getProduto().getId(),
-                    i.getProduto().getNome(), i.getQuantidade(),
-                    i.getPrecoUnitario(), i.getSubtotal()))
-            .toList();
-    var subtotal = c.getItens().stream()
-            .map(ItemCarrinho::getSubtotal)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-    var frete = calcularFrete(subtotal);
+//private CarrinhoResponseDTO paraResponse(Carrinho c) {
+//    var itens = c.getItens().stream()
+//            .map(i -> new ItemResponseDTO(i.getId(), i.getProduto().getId(),
+//                    i.getProduto().getNome(), i.getQuantidade(),
+//                    i.getPrecoUnitario(), i.getSubtotal()))
+//            .toList();
+//    var subtotal = c.getItens().stream()
+//            .map(ItemCarrinho::getSubtotal)
+//            .reduce(BigDecimal.ZERO, BigDecimal::add);
+//    var frete = calcularFrete(subtotal);
 
-    BigDecimal desconto = BigDecimal.ZERO;
-    String cupomAplicado = null;
-    if (c.getCodigoCupom() != null) {
-        var cupom = cupomFactory.criar(c.getCodigoCupom());
-        desconto = cupom.calcularDesconto(subtotal);
-        cupomAplicado = cupom.getCodigo();
+//    BigDecimal desconto = BigDecimal.ZERO;
+//    String cupomAplicado = null;
+//    if (c.getCodigoCupom() != null) {
+//        var cupom = cupomFactory.criar(c.getCodigoCupom());
+//        desconto = cupom.calcularDesconto(subtotal);
+//        cupomAplicado = cupom.getCodigo();
+//    }
+//
+//    var total = subtotal.add(frete).subtract(desconto);
+//    return new CarrinhoResponseDTO(c.getId(), itens, cupomAplicado,
+//            desconto, subtotal, frete, total);
+//    }
+
+    private CarrinhoResponseDTO paraResponse(Carrinho c) {
+        var itens = c.getItens().stream()
+                .map(i -> new ItemResponseDTO(i.getId(), i.getProduto().getId(),
+                        i.getProduto().getNome(), i.getQuantidade(),
+                        i.getPrecoUnitario(), i.getSubtotal()))
+                .toList();
+
+        var subtotal = c.getItens().stream()
+                .map(ItemCarrinho::getSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Usa a Strategy (se não tiver nada salvo, assume PADRAO)
+        var estrategia = c.getEstrategiaFrete() == null ? "PADRAO" : c.getEstrategiaFrete();
+        var frete = calculadoraFrete.calcular(estrategia, subtotal);
+
+        BigDecimal desconto = BigDecimal.ZERO;
+        String cupomAplicado = null;
+        if (c.getCodigoCupom() != null) {
+            var cupom = cupomFactory.criar(c.getCodigoCupom());
+            desconto = cupom.calcularDesconto(subtotal);
+            cupomAplicado = cupom.getCodigo();
+        }
+
+        var total = subtotal.add(frete).subtract(desconto);
+
+        return new CarrinhoResponseDTO(c.getId(), itens, cupomAplicado, desconto,
+                estrategia, subtotal, frete, total);
     }
-
-    var total = subtotal.add(frete).subtract(desconto);
-    return new CarrinhoResponseDTO(c.getId(), itens, cupomAplicado,
-            desconto, subtotal, frete, total);
-}
 
     // diagnóstico didático — removível no deploy
     public long identityHashCodeConfiguracoes() {
+
         return System.identityHashCode(configuracoes);
     }
 }

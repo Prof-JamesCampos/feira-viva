@@ -19,11 +19,20 @@ public class ConfiguracoesFeiraViva {
 
     @PostConstruct
     void logInstancia() {
-        log.info("ConfiguracoesFeiraViva criada: identityHashCode={}", System.identityHashCode(this));
+        log.info("ConfiguracoesFeiraViva criada: identityHashCode={}",
+                System.identityHashCode(this));
     }
 
-    public BigDecimal getFreteFixo() { return freteFixo; }
-    public BigDecimal getFreteGratisAcimaDe() { return freteGratisAcimaDe; }
-    public String getNomeLoja() { return nomeLoja; }
-    public String getMoeda() { return moeda; }
+    public BigDecimal getFreteFixo() {
+        return freteFixo;
+    }
+    public BigDecimal getFreteGratisAcimaDe() {
+        return freteGratisAcimaDe;
+    }
+    public String getNomeLoja() {
+        return nomeLoja;
+    }
+    public String getMoeda() {
+        return moeda;
+    }
 }
