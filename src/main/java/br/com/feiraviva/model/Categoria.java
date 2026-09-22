@@ -77,14 +77,17 @@ public class Categoria {
     }
 
     public void setCategoriaPai(Categoria categoriaPai) {
+
         this.categoriaPai = categoriaPai;
     }
 
     public List<Categoria> getSubcategorias() {
+
         return subcategorias;
     }
 
     public void setSubcategorias(List<Categoria> subcategorias) {
+
         this.subcategorias = subcategorias;
     }
 }
